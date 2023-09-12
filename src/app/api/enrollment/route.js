@@ -15,9 +15,7 @@ export const GET = async (request) => {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     studentId = payload.studentId;
-
-    //read role information from "payload" here (just one line code!)
-    //role = ...
+    role = payload.role;
   } catch {
     return NextResponse.json(
       {
@@ -35,9 +33,15 @@ export const GET = async (request) => {
   // }
 
   const courseNoList = [];
-  for (const enroll of DB.enrollments) {
-    if (enroll.studentId === studentId) {
-      courseNoList.push(enroll.courseNo);
+  if( role === "ADMIN" ){
+    for (const enroll of DB.enrollments){
+      courseNoList.push(enroll);
+    }
+  } else {
+    for (const enroll of DB.enrollments) {
+      if (enroll.studentId === studentId) {
+        courseNoList.push(enroll.courseNo);
+      }
     }
   }
   return NextResponse.json({
@@ -57,8 +61,7 @@ export const POST = async (request) => {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     studentId = payload.studentId;
-    //read role information from "payload" here (just one line code!)
-    //role = ...
+    role = payload.role;
   } catch {
     return NextResponse.json(
       {
@@ -69,14 +72,15 @@ export const POST = async (request) => {
     );
   }
 
-  //if role is "ADMIN", send the following response
-  // return NextResponse.json(
-  //   {
-  //     ok: true,
-  //     message: "Only Student can access this API route",
-  //   },
-  //   { status: 403 }
-  // );
+  if( role === "ADMIN" ) {
+    return NextResponse.json(
+      {
+        ok: true,
+        message: "Only Student can access this API route",
+      },
+      { status: 403 }
+    );
+  }
 
   //read body request
   const body = await request.json();
@@ -127,19 +131,34 @@ export const POST = async (request) => {
 };
 
 export const DELETE = async (request) => {
-  //check token
-  //verify token and get "studentId" and "role" information here
+  const rawAuthHeader = headers().get("authorization");
+  const token = rawAuthHeader.split(" ")[1];
   let studentId = null;
   let role = null;
 
-  //if role is "ADMIN", send the following response
-  // return NextResponse.json(
-  //   {
-  //     ok: true,
-  //     message: "Only Student can access this API route",
-  //   },
-  //   { status: 403 }
-  // );
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    studentId = payload.studentId;
+    role = payload.role;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Invalid token",
+      },
+      { status: 401 }
+    );
+  }
+
+  if( role === "ADMIN" ){
+    return NextResponse.json(
+      {
+        ok: true,
+        message: "Only Student can access this API route",
+      },
+      { status: 403 }
+    );
+  }
 
   //get courseNo from body and validate it
   const body = await request.json();
